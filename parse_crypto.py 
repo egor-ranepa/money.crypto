@@ -88,3 +88,37 @@ def get_tokens(count=10):
     except Exception as e:
         print(f"Неожиданная ошибка: {e}")
         return []
+
+def main():
+    print("Парсер криптовалют с Etherscan")
+    print("=" * 50)
+    
+    try:
+        count = int(input("Сколько токенов показать? (по умолчанию 10): ") or "10")
+        if count <= 0:
+            count = 10
+    except ValueError:
+        count = 10
+        print("Используется значение по умолчанию: 10")
+    
+    print(f"\nПолучаем данные о {count} самых дорогих токенах...")
+    tokens = get_tokens(count)
+    
+    if not tokens:
+        print("Не удалось получить данные о токенах")
+        return
+    
+    print(f"\nТоп {len(tokens)} самых дорогих токенов:")
+    print("=" * 70)
+    print(f"{'№':<3} {'Название':<25} {'Тикер':<10} {'Цена (USD)':<15}")
+    print("-" * 70)
+    
+    for i, token in enumerate(tokens, 1):
+        name = token['name'][:23] + "..." if len(token['name']) > 23 else token['name']
+        ticker = token['ticker'][:8] if token['ticker'] else "N/A"
+        price = f"${token['price']:,.2f}"
+        
+        print(f"{i:<3} {name:<25} {ticker:<10} {price:<15}")
+
+if __name__ == "__main__":
+    main()

@@ -1,1 +1,15 @@
-venv
+
+
+
+.venv
+env/
+venv/
+
+
+*.log
+logs/
+
+
+*.csv
+*.json
+*.xml
