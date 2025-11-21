@@ -1,1 +1,90 @@
-hjbg
+import requests
+from bs4 import BeautifulSoup
+
+def get_tokens(count=10):
+    """Парсит токены с Etherscan и возвращает отсортированный список"""
+    url = "https://etherscan.io/tokens"
+    
+    # Заголовки для имитации браузера
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        tokens = []
+        
+        # Находим таблицу с токенами
+        table = soup.find('table')
+        if not table:
+            print("Таблица не найдена")
+            return []
+        
+        # Находим все строки таблицы с токенами (пропускаем заголовок)
+        rows = table.find_all('tr')[1:51]  # берем первые 50 токенов
+        
+        for row in rows:
+            cells = row.find_all('td')
+            if len(cells) < 4:
+                continue
+            
+            # Извлекаем название и ссылку
+            token_cell = cells[1]
+            link = token_cell.find('a')
+            if not link:
+                continue
+                
+            token_text = link.get_text(strip=True)
+            token_url = "https://etherscan.io" + link.get('href')
+            
+            # Разделяем название и тикер
+            if '(' in token_text and ')' in token_text:
+                name = token_text.split('(')[0].strip()
+                ticker = token_text.split('(')[1].replace(')', '').strip()
+            else:
+                name = token_text
+                ticker = ""
+            
+            # Извлекаем цену (третья колонка)
+            price_cell = cells[3]
+            price_text = price_cell.get_text(strip=True)
+            
+            # Очищаем цену от символов
+            price_clean = ""
+            for char in price_text:
+                if char.isdigit() or char == '.':
+                    price_clean += char
+                elif char == '$':
+                    continue
+                else:
+                    break  # останавливаемся на первом нечисловом символе (кроме $ и .)
+            
+            try:
+                price = float(price_clean) if price_clean else 0.0
+            except ValueError:
+                price = 0.0
+            
+            tokens.append({
+                'name': name,
+                'ticker': ticker,
+                'price': price,
+                'url': token_url
+            })
+        
+        # Сортируем по убыванию цены и возвращаем нужное количество
+        sorted_tokens = sorted(tokens, key=lambda x: x['price'], reverse=True)
+        return sorted_tokens[:count]
+        
+    except requests.RequestException as e:
+        print(f"Ошибка при запросе: {e}")
+        return []
+    except Exception as e:
+        print(f"Неожиданная ошибка: {e}")
+        return []
